@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="ja"><!-- ver.0.9.9c -->
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,height=device-height,minimum-scale=1,maximum-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<title>Controller</title>
+<link rel="shortcut icon" href="favicon.png">
+<link rel="stylesheet" href="css/fakeLoader.css"><!-- 03 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+<script src="js/flexibility.js"></script>
+<script src="/webiopi.js"></script>
+<script src="js/script.js"></script>
+<script>
+var wpnt = 0;
+var perfEntries = performance.getEntriesByType("navigation");
+perfEntries.forEach(function(pe){
+  switch( pe.type ){
+    case 'navigate':
+      wpnt = 1;
+      break;
+    case 'reload':
+      wpnt = 2;
+      break;
+    case 'back_forward':
+      wpnt = 3;
+      break;
+    case 'prerender':
+      wpnt = 4;
+      break;
+  }
+});
+</script>
+<script>
+function isOpeningHours(curd, open_time, close_time) {
+    let cur_time =curd.getHours() + ":" + curd.getMinutes();
+    return (cur_time >= open_time && cur_time <= close_time);
+}
+</script>
+<script>
+var sid = ""; // セッションID
+var uid = ""; // ユーザーID
+var cid = ""; // mekapit
+var chance_ex = 0;// チャンス拡張(ラズパイから取得する仕様にすると、ボタンの生成がタイミング的に間に合わないためパラメータで受け取る)
+var rid = 0; // RaspiID
+var slot = ""; // スロット名称
+var point = 0; // ポイント
+var nerai = 0; // 狙いボタン表示・非表示
+var chance = 0; // チャンスボタン表示・非表示
+var home = ""; // 戻り先
+var momo = ""; // momo
+var time_out = 0; // タイムアウト(秒)
+var open_time = ""; // 開店時間
+var close_time = ""; // 閉店時間
+var ag_max = 0;
+// //////////////////
+//var game_start = 0; // 0116
+var error_code = 0; // 0116
+let token = getParam('token').split('-');
+if (token.length == 4) { // mekapit
+  sid = token[0];
+  uid = token[1];
+  chance_ex = token[2];
+  cid = token[3]; // mekapit
+}
+// //////////////////////////////////
+webiopi().ready(function() {
+  getInfo();
+  if (wpnt == 1) {
+//    webiopi().callMacro("Game_Initialize", [uid, sid]);
+    webiopi().callMacro("Game_Initialize", [uid, cid, sid], callbackGameInitialize); // mekapit
+  }
+  
+  var button = webiopi().createPulseButton("betButton", "", 3);
+  $("#control1_1").append(button);
+  button = webiopi().createButton("autoButton", "", function() { webiopi().callMacro("btnAuto"); });
+  $("#control1_2").append(button);
+  if (chance_ex == 0) {
+    button = webiopi().createPulseButton("chanceButton", "", 11);
+  } else {
+    button = webiopi().createButton("chanceButton", "", function() { webiopi().callMacro("btnChance"); });
+  }
+  $("#control1_3").append(button);
+  button = webiopi().createButton("neraiButton1", "", function() { webiopi().callMacro("btnNerai1"); });
+  $("#control1_4").append(button);
+  button = webiopi().createPulseButton("startButton", "", 4);
+  $("#control2_1").append(button);
+  button = webiopi().createPulseButton("stopButton1", "", 5);
+  $("#control2_2").append(button);
+  button = webiopi().createPulseButton("stopButton2", "", 6);
+  $("#control2_3").append(button);
+  button = webiopi().createPulseButton("stopButton3", "", 7);
+  $("#control2_4").append(button);
+  $('#betButton').addClass("webiobtn");
+  $('#autoButton').addClass("webiobtn");
+  $('#autoButton').css('background','url(../img/btn-auto-0.png) left top no-repeat');
+  $('#chanceButton').addClass("webiobtn");
+  $('#chanceButton').css('background','url(../img/btn-chance.png) left top no-repeat');
+  $('#neraiButton1').addClass("webiobtn");
+  $('#neraiButton1').css('background','url(../img/btn-nerai-0.png) left top no-repeat');
+  $('#startButton').addClass("webiobtn");
+  $('#startButton').css('background','url(../img/btn-start.png) left top no-repeat');
+  $('#stopButton1').addClass("webiobtn");
+  $('#stopButton1').css('background','url(../img/btn-stop1.png) left top no-repeat');
+  $('#stopButton2').addClass("webiobtn");
+  $('#stopButton2').css('background','url(../img/btn-stop2.png) left top no-repeat');
+  $('#stopButton3').addClass("webiobtn");
+  $('#stopButton3').css('background','url(../img/btn-stop3.png) left top no-repeat');
+
+  webiopi().refreshGPIO(true);
+  $('#autoButton').click(function() { btnAutoClick(this); resetTimeout(); }); // timeout関連
+  $('#neraiButton1').click(function() { btnNerai1Click(this); });
+//  $('#article1').css({'visibility':'visible'});
+
+// timeout関連
+  time_out = time_out * 60000;
+  var timer_id;
+//  var timeout = function() {
+//	$('#debug').html('id=' + timer_id + ' time_out=' + time_out);
+//	alert("");
+///	exitConf(1);
+//	webiopi().callMacro("dataUpdate", [point, uid, rid]);
+//	window.location.href = home + "?rid=" + rid + "&uid=" + uid + "&rsv=0&to=1";
+//  }
+//  function resetTimeout() {
+//	  alert(timer_id + " restart=" + restart);
+//	$('#debug').html('id=' + timer_id + ' time_out=' + time_out);
+///    clearTimeout( timer_id );
+///    if (auto == 0) {
+///    	timer_id = setTimeout(timeout, time_out);
+//    } else {
+//		$('#debug').html('000');
+///    }
+//  }
+  timer_id = setTimeout(timeout, time_out);
+  $('#betButton').click(function() { resetTimeout(); });
+  $('#chanceButton').click(function() { resetTimeout(); });
+  $('#startButton').click(function() { resetTimeout(); });
+  $('#stopButton1').click(function() { resetTimeout(); });
+  $('#stopButton2').click(function() { resetTimeout(); });
+  $('#stopButton3').click(function() { resetTimeout(); });
+ /*
+  alert(error_code);
+  if (error_code != 0) { // 0116
+	  game_start = 1;
+  } else {
+	  alert("ERROR" + error_code);
+	  exitConf(0);
+//	  alert("終了");
+  }
+*/
+});
+
+function callbackGameInitialize(macro, args, data) { // 0116
+	error_code = data;
+//	alert(error_code);
+}
+const getInfo = () => {
+	webiopi().callMacro("getInfo", [], callbackGetInfo);
+}
+//function getInfo() { webiopi().callMacro("getInfo", [], callbackGetInfo); }
+function callbackGetInfo(macro, args, data) {
+  let resArray = data.split(",");
+  rid = resArray[0];
+  slot = resArray[1];
+  nerai = resArray[2];
+  chance = resArray[3];
+  home = resArray[4] + "/rp/jsp/index.jsp";
+//  momo = resArray[5] + "/html/p2p.html";
+  momo = resArray[5] + "/html/p2p2.html";
+  time_out = resArray[6];
+  open_time = resArray[7];
+  close_time = resArray[8];
+  ag_max = resArray[9];
+  /////////////////////////////
+  document.title = slot;
+  $("#slot").html("【" + slot + "】");
+  if (slot.length>12) {
+    $("#slot").css('font-size', '.7em');
+  } else if (slot.length>8) {
+    $("#slot").css('font-size', '.9em');
+  }
+  $("#video").attr("src", momo);
+  if (chance == 0) {
+    $("#control1_3").css('visibility','hidden'); 
+  }
+  if (nerai == 0) {
+    $("#control1_4").css('visibility','hidden'); 
+  }
+  $('#rid').val(rid);
+  $('#uid').val(uid);
+// debug -----------------------------
+ $('#frm').attr('action', home);
+//  alert(home);
+}
+</script>
+<link href="css/webiopi.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+<link href="css/bootstrap.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+<link href="css/frame.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+<link href="css/jquery.mobile-1.4.5.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+<style>
+main {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	padding: 15px 30px;
+	background: rgba(0,0,0,0);
+	color: rgba(0, 0, 0, 0.88);
+	text-align: center;
+	font-size: 1.3rem;
+	width: 300px;
+}
+</style>
+<style>
+/* ビデオ画像(iframe) ***************** */
+iframe {
+  border:none;
+  width:100%;
+  height:100%;
+}
+.container{
+  position: absolute;
+  left: 0; top: 5%;
+  width: 100%; height: 90%;
+/*
+  background: rgba(245, 243, 243, 0.8);
+  */
+  overflow: visible;
+  z-index: 12345;
+  opacity: 1;
+  transform: scale(.98, .98);
+}
+/* *********************************** */
+.informationPanel{
+  position: absolute;
+  left: 0; top: 0%;
+  background-color: fuchsia;
+   width: 100%; height: 15%;
+  z-index: 32345;
+  font-size:18px;
+  font-weight: bold;
+  overflow-wrap normal;
+}
+/* *********************************** */
+div#fullOverlay{
+  position: absolute;
+  left: 0; top: 70%;
+  width: 100%; height: 20%;
+/*  background: rgba(245, 243, 243, 0.8);*/
+  overflow: visible;
+  z-index: 2147483647;
+  opacity: 0.7;
+  transform: scale(.8, .8);
+}
+div#fullOverlay2{
+  position: absolute;
+  left: 0%; top: 80%;
+  width: 100%; height: 20%;
+/*  background: rgba(245, 243, 243, 0.8);*/
+  overflow: visible;
+  z-index: 2147483648;
+  opacity: 0.7;
+  transform: scale(.8, .8);
+}
+/* *********************************** */
+.operationPanel{
+  position: absolute;
+  left: 0; top: 96%;
+/*  background-color:green;*/
+   width: 100%; height: 10%;
+   z-index: 2247483647;
+margin-left:2em;margin-top:-.5em;
+}
+.webiobtnx{
+	ontouchstart:"";
+    border: 0px;
+    width:32px;
+    height:32px;
+    background: url(../img/icn_exit28.png) left top no-repeat;
+}
+.webiobtnx2{
+	ontouchstart:"";
+    border: 0px;
+    width:32px;
+    height:32px;
+    background: url(../img/icn_lock28.png) left top no-repeat;
+}
+.webiobtnx3{
+	ontouchstart:"";
+    border: 0px;
+    width:32px;
+    height:32px;
+    background: url(../img/icn_reload28.png) left top no-repeat;
+}
+/* *********************************** */
+
+</style>
+</head>
+<body>
+<div id="fakeLoader_pre"></div>
+<div data-role="page" id="article2" style="display:none;">
+  <main>
+    <div style="text-align: center;">お待ち下さい<br><img src="img/term.gif"></div>
+  </main>
+</div>
+
+<div data-role="page" id="article1" style="visibility: hidden;">
+  <div class="informationPanel" data-role="header" data-theme="b" data-position="fixed" data-id="footer" style="background-color:black;text-aligh:center;height:60px;">
+    <span id="slot" class="ui-btn-center cheader"></span>
+    <!-- span class="ui-btn-center cheader" id="home" style="margin-left: .3rem;">
+    <a href="javascript:exitConf(0);" id="home2" style="color: white;font-size: .9rem;"><img src="img/icon_exit.png" width="20" height="auto">終了</a><span style="margin-left: 2.5rem;"></span>
+    <a href="javascript:exitConf(1);" id="home3" style="color: white;font-size: .9rem;"><img src="img/icon_lock.png" width="20" height="auto">保留</a>
+    </span -->
+    <br>
+    <span id="info" class="ui-btn-center cheader" style="margin-top:2px;margin-left:20px;"></span>
+    <img src="img/rb.jpg" id="rb_on" class="lamp" style="margin-left:2px;">
+    <img src="img/bb.jpg" id="bb_on" class="lamp">
+  </div>
+  <div class="container">
+    <!-- div class="video" style="height:50vh;" -->
+    <!-- iframe id="video" src="" width="100%" height="100%">using inline frame</iframe -->
+	<iframe id="video" src=""></iframe>
+  </div>
+  <div id="fullOverlay">
+    <div class="boxContainer">
+      <div id="control1_1" class="wiopdiv"></div><div id="control1_2" class="wiopdiv"></div>
+      <div id="control1_3" class="wiopdiv"></div><div id="control1_4" class="wiopdiv"></div>
+    </div>
+  </div>
+  <div id="fullOverlay2">
+    <div class="boxContainer">
+      <div id="control2_1" class="wiopdiv"></div><div id="control2_2" class="wiopdiv"></div>
+      <div id="control2_3" class="wiopdiv"></div><div id="control2_4" class="wiopdiv"></div>
+    </div>
+  </div>
+  <!-- div class="boxContainer">
+    <div id="control3_1" class="wiopdiv-mini"></div><div id="control3_2" class="wiopdiv-mini"></div>
+    <div id="control3_3" class="wiopdiv-mini"></div><div id="control3_4" class="wiopdiv-mini"></div>
+  </div>
+  <div class="boxContainer">
+    <div id="control4_1" class="wiopdiv-mini"></div><div id="control4_2" class="wiopdiv-mini"></div>
+    <div id="control4_3" class="wiopdiv-mini"></div><div id="control4_4" class="wiopdiv-mini"></div>
+    <div id="control4_5" class="wiopdiv-mini">
+  </div -->
+  <div id="operation" class="operationPanel" >
+    <button id="b2" class="webiobtnx"></button>終了
+    <span style="margin-left:3em;"></span>
+    <button id="b3" class="webiobtnx2"></button>保留
+    <span style="margin-left:3em;"></span>
+    <button id="b4" class="webiobtnx3"></button>再読込
+  </div>
+  <!--
+    <span class="ui-btn-center cheader" id="home" style="margin-left: .3rem;">
+    <a href="javascript:exitConf(0);" id="home2" style="color: white;font-size: .9rem;"><img src="img/icon_exit.png" width="20" height="auto">終了</a><span style="margin-left: 2.5rem;"></span>
+    <a href="javascript:exitConf(1);" id="home3" style="color: white;font-size: .9rem;"><img src="img/icon_lock.png" width="20" height="auto">保留</a>
+    </span>
+  -->
+  <form name="frm" id="frm" action="" method="post"><input type="hidden" name="rid" id="rid" value=""><input type="hidden" name="uid" id="uid" value=""><input type="hidden" name="opt" id="opt" value=""></form>
+</div>
+
+
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script><!-- SweetAlert -->
+<script src="js/fakeLoader.min.js"></script>
+<script>
+$("#fakeLoader_pre").fakeLoader({
+	timeToHide: Waiting,
+	zIndex: "999",
+	spinner: "spinner3",
+	bgColor: "#0F70BC",
+});
+
+$(function(){ 
+	history.pushState(null, null, null); $(window).on("popstate", function(){ history.pushState(null, null, null); }); 
+    $("#b2").on('click', { paraId: "2", paraData: "0" }, clickFunc);
+    $("#b3").on('click', { paraId: "3", paraData: "1" }, clickFunc); 
+    $("#b4").on('click', { paraId: "4", paraData: "2" }, reloadVideo); 
+  setTimeout(log, Waiting - 500);
+});
+
+function clickFunc(event) {
+    //引数値は自分自身オブジェクトの項目として参照
+//    var id = event.data.paraId;     //「paraId」値
+    var data = event.data.paraData; //「paraData」値
+//    alert("button id = " + id + ", data = " + data);
+//    webiopi().callMacro("Game_Finalize2", data);
+//exitConf(data);
+exitConf(event.data.paraData);
+//    $("#frm").submit();
+}
+
+var log = function(){
+  $('#article1').css({'visibility':'visible'});
+//  console.log("test");
+};
+
+
+
+function reloadVideo(event) {
+	let src = $("#video").attr("src");
+$("#video").attr("src","");
+$("#video").attr("src",src);
+//	alert("リロードふぁんく" + src);
+	
+}
+</script>  
+</body>
+</html>
