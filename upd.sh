@@ -6,7 +6,7 @@ fi
 base='/usr/share/webiopi/'
 path=(${base}'python/' ${base}'htdocs/' ${base}'htdocs/js/' ${base}'htdocs/css/')
 files=('script.py' 'play.html' 'script.js' 'style.css')
-url='https://github.com/isk727/RP-PR/blob/main/'
+url='https://raw.githubusercontent.com/isk727/RP-PR/main/'
 today=`date "+%Y%m%d%H%M%S"`
 i=0
 for f in ${files[@]}
