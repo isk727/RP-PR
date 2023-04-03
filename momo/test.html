@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="shortcut icon" href="#">
+    <title>Momo P2P</title>
+<style>
+ .Rotate45{
+  -webkit-transform: rotate(-90deg);
+ }
+</style>
+<script
+  src="https://code.jquery.com/jquery-3.6.0.min.js"
+  integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+  crossorigin="anonymous"></script>
+<script>
+function Rotate(){
+ var Obj = document.getElementById("ResizeWindow");
+ var VObj = document.getElementById("remote_video");
+ Obj.className = "Rotate45";
+ VObj.className = "Rotate45";
+ Obj.style.visibility ="visible";
+ VObj.style.visibility ="visible";
+}	
+</script>
+<script>
+$(function(){
+    Rotate();
+    connect();
+});	
+</script>    
+  </head>
+  <body>
+    <h3>Momo P2P</h3>
+    <div style="visibility: hidden">
+      <select id="codec">
+        <option value="H264">H264</option>
+        <option value="VP8">VP8</option>
+        <option value="VP9">VP9</option>
+      </select>
+      <input type="button" onclick="connect();" value="Connect">
+      <input type="button" onclick="disconnect();" value="Disconnect">
+      <input type="button" onclick="play();" value="Play">
+    </div>
+
+	<div id="ResizeWindow" onMouseDown="MouseDownResize()" 
+     		style="position:absolute; left:100px; top:100px; cursor:se-resize;
+                width: 400px; height: 240px; background-color: #C0C0C0; border-style: inset; visibility: hidden;">
+	</div>
+	<video id="remote_video2" autoplay style="border: 3px solid gray; visibility: hidden;"></video>
+<video id="remote_video" autoplay style="position:absolute; left:100px; top:100px; width: 400px; height: 240px; background-color: #000000;"></video>
+    </div>
+    <script type='text/javascript' src='./webrtc.js'></script>
+  </body>
+</html>

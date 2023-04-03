@@ -1,0 +1,11 @@
+[Unit]
+Description = momo
+
+[Service]
+WorkingDirectory=/usr/share/momo-19.11.0_raspbian-buster_armv7
+ExecStart=/usr/share/momo-19.11.0_raspbian-buster_armv7/momo --framerate 20 --resolution QVGA --fixed-resolution --port 8107 test
+Restart=always
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
