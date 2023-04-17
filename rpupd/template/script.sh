@@ -18,4 +18,4 @@ sudo mv script.py /usr/share/webiopi/python/.
 sudo mv script.js /usr/share/webiopi/htdocs/js/.
 sudo mv style.css /usr/share/webiopi/htdocs/css/.
 
-sudo reboot
+sudo systemctl restart webiopi
